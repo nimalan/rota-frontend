@@ -14,7 +14,7 @@ moment.locale('en-gb');
 
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
-const API_URL = 'https://my-rota-api.onrender.com';
+const API_URL = 'https://my-rota-api.onrender.com'; // Make sure this is your live Render URL
 
 const GlobalStyles = () => (
   <style jsx global>{`
@@ -129,7 +129,6 @@ function ShiftCalendar({ loggedInUser }) {
     const [shiftEndTime, setShiftEndTime] = useState('17:00');
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [navDate, setNavDate] = useState(new Date());
-    // --- NEW: State to control the calendar's view (month, week, day) ---
     const [view, setView] = useState('week');
 
     const colorPalette = ['#3174ad', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6610f2'];
@@ -239,6 +238,8 @@ function ShiftCalendar({ loggedInUser }) {
         <div>
             <div style={{ height: '70vh' }}>
                 <GlobalStyles />
+                {/* --- THIS IS THE FIX: Display the error message if it exists --- */}
+                {error && <p style={{color: 'red', textAlign: 'center'}}>{error}</p>}
                 <DraggableCalendar
                     localizer={localizer}
                     events={events}
@@ -252,7 +253,6 @@ function ShiftCalendar({ loggedInUser }) {
                     min={minTime}
                     max={maxTime}
                     eventPropGetter={eventStyleGetter}
-                    // --- UPDATED: Control the calendar's date and view state ---
                     date={navDate}
                     view={view}
                     onNavigate={setNavDate}
