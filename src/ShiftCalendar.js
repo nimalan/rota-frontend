@@ -14,7 +14,7 @@ moment.locale('en-gb');
 
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
-const API_URL = 'https://my-rota-api.onrender.com'; // Make sure this is your live Render URL
+const API_URL = 'https://my-rota-api.onrender.com'; // Replace with your actual Render URL
 
 const GlobalStyles = () => (
   <style jsx global>{`
@@ -136,14 +136,14 @@ function ShiftCalendar({ loggedInUser }) {
     const eventStyleGetter = (event) => ({ style: { backgroundColor: generateColor(event.userId) } });
 
     useEffect(() => {
-        const fetchShifts = axios.get(`${API_URL}/shifts`);
+        const fetchShifts = axios.get(`${API_URL}/shifts?start_date=${moment(navDate).startOf('month').toISOString()}&end_date=${moment(navDate).endOf('month').toISOString()}`);
         const fetchUsers = axios.get(`${API_URL}/users`);
         Promise.all([fetchShifts, fetchUsers]).then(([shiftsResponse, usersResponse]) => {
             const formattedEvents = shiftsResponse.data.map(shift => formatEvent(shift));
             setEvents(formattedEvents);
             setUsers(usersResponse.data);
         }).catch(err => { console.error('Error fetching data!', err); setError('Could not fetch initial data.'); });
-    }, []);
+    }, [navDate]);
     
     const handleMoveOrResize = ({ event, start, end }) => {
         const originalEvents = [...events];
@@ -238,7 +238,6 @@ function ShiftCalendar({ loggedInUser }) {
         <div>
             <div style={{ height: '70vh' }}>
                 <GlobalStyles />
-                {/* --- THIS IS THE FIX: Display the error message if it exists --- */}
                 {error && <p style={{color: 'red', textAlign: 'center'}}>{error}</p>}
                 <DraggableCalendar
                     localizer={localizer}

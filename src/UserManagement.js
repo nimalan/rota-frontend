@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'https://my-rota-api.onrender.com';
+const API_URL = 'https://my-rota-api.onrender.com'; // Replace with your actual Render URL
 
 function UserManagement() {
     const [users, setUsers] = useState([]);
     const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+    const [password, setPassword] = useState(''); 
     const [role, setRole] = useState('employee');
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -44,7 +44,7 @@ function UserManagement() {
                 setUsers(prevUsers => [...prevUsers, response.data]);
                 setUsername('');
                 setEmail('');
-                setPassword('');
+                setPassword(''); 
                 setRole('employee');
                 setSuccess(`Successfully added user: ${response.data.username}`);
             })
@@ -55,9 +55,7 @@ function UserManagement() {
             });
     };
 
-    // --- NEW: Function to handle deleting a user ---
     const handleDeleteUser = (userId, userUsername) => {
-        // Prevent deletion of the last admin
         const adminCount = users.filter(u => u.role === 'admin').length;
         const userToDelete = users.find(u => u.id === userId);
 
@@ -69,7 +67,6 @@ function UserManagement() {
         if (window.confirm(`Are you sure you want to delete the user "${userUsername}"? This cannot be undone.`)) {
             axios.delete(`${API_URL}/users/${userId}`)
                 .then(() => {
-                    // Remove the user from the list for an instant UI update
                     setUsers(prevUsers => prevUsers.filter(user => user.id !== userId));
                     setSuccess(`Successfully deleted user: ${userUsername}`);
                 })
@@ -129,7 +126,6 @@ function UserManagement() {
                             </div>
                             <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                                 <span style={{ background: user.role === 'admin' ? '#007bff' : '#6c757d', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '0.8rem', textTransform: 'capitalize' }}>{user.role}</span>
-                                {/* --- NEW: Delete Button --- */}
                                 <button 
                                     onClick={() => handleDeleteUser(user.id, user.username)}
                                     style={{background: 'none', border: 'none', cursor: 'pointer', color: '#dc3545', fontSize: '1.2rem', fontWeight: 'bold'}}
