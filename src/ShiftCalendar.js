@@ -138,10 +138,11 @@ function ShiftCalendar({ loggedInUser }) {
     useEffect(() => {
         const fetchUsers = axios.get(`${API_URL}/users`);
         
-        // Determine the date range based on the current view to fetch shifts
-        const startDate = moment(navDate).startOf(view === 'month' ? 'month' : 'week').toISOString();
-        const endDate = moment(navDate).endOf(view === 'month' ? 'month' : 'week').toISOString();
-        const fetchShifts = axios.get(`${API_URL}/shifts?start_date=${startDate}&end_date=${endDate}`);
+        // --- THIS IS THE FIX ---
+        // Format the dates as simple YYYY-MM-DD strings to avoid timezone issues.
+        const startDate = moment(navDate).startOf(view === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
+        const endDate = moment(navDate).endOf(view === 'month' ? 'month' : 'week').format('YYYY-MM-DD');
+        const fetchShifts = axios.get(`${API_URL}/shifts?start_date=${startDate}T00:00:00&end_date=${endDate}T23:59:59`);
 
         Promise.all([fetchShifts, fetchUsers]).then(([shiftsResponse, usersResponse]) => {
             const formattedEvents = shiftsResponse.data.map(shift => formatEvent(shift));
