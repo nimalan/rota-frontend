@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment';
 import 'moment/locale/en-gb'; 
@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR
+// FINAL-VERSION-CHECK-CALENDAR-V3
 
 moment.locale('en-gb');
 
@@ -101,7 +101,20 @@ function ShiftCalendar({ loggedInUser }) {
     const generateColor = (id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length];
     const eventStyleGetter = (event) => ({ style: { backgroundColor: generateColor(event.userId) } });
 
-    const fetchShifts = () => {
+    const formatEvent = useCallback((shift) => ({
+        id: shift.id,
+        title: shift.user ? shift.user.username : 'Unassigned',
+        start: new Date(shift.start_time),
+        end: new Date(shift.end_time),
+        userId: shift.user_id,
+        recurring_shift_id: shift.recurring_shift_id
+    }), []);
+
+    useEffect(() => {
+        axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
+    }, []);
+
+    const fetchShifts = useCallback(() => {
         const startDate = moment(navDate).startOf(view === 'month' ? 'month' : 'week').toISOString();
         const endDate = moment(navDate).endOf(view === 'month' ? 'month' : 'week').toISOString();
         axios.get(`${API_URL}/shifts`, { params: { start_date: startDate, end_date: endDate }})
@@ -110,26 +123,14 @@ function ShiftCalendar({ loggedInUser }) {
                 setEvents(formattedEvents);
             })
             .catch(err => console.error("Could not fetch shifts", err));
-    };
-
-    useEffect(() => {
-        axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
-    }, []);
+    }, [navDate, view, formatEvent]);
 
     useEffect(() => {
         if(loggedInUser) {
             fetchShifts();
         }
-    }, [navDate, view, loggedInUser]);
+    }, [loggedInUser, fetchShifts]);
 
-    const formatEvent = (shift) => ({
-        id: shift.id,
-        title: shift.user ? shift.user.username : 'Unassigned',
-        start: new Date(shift.start_time),
-        end: new Date(shift.end_time),
-        userId: shift.user_id,
-        recurring_shift_id: shift.recurring_shift_id
-    });
     
     const handleSelectSlot = (slotInfo) => {
         setSelectedEvent(null);
