@@ -214,7 +214,7 @@ function ShiftCalendar({ loggedInUser }) {
                     eventPropGetter={eventStyleGetter} date={navDate} view={view} onNavigate={setNavDate} onView={setView}
                 />
             </div>
-            {/* The weekly hours summary can remain here if desired */}
+            {/* The weekly hours summary can be re-added here if desired by admin */}
 
             <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
@@ -233,7 +233,7 @@ function ShiftCalendar({ loggedInUser }) {
                         </select>
                     </label>
 
-                    {/* --- NEW: Recurrence Options (only shows on create) --- */}
+                    {/* --- Recurrence Options (only shows on create) --- */}
                     {!selectedEvent && (
                         <div>
                             <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500}}>
@@ -253,7 +253,7 @@ function ShiftCalendar({ loggedInUser }) {
                         </div>
                     )}
 
-                    {/* --- NEW: Edit Scope Options (only shows on edit of recurring) --- */}
+                    {/* --- Edit Scope Options (only shows on edit of recurring) --- */}
                     {selectedEvent && selectedEvent.recurring_shift_id && (
                         <div style={{marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '15px'}}>
                             <h4 style={{margin: '0 0 10px 0', fontWeight: 600}}>Edit Options</h4>
