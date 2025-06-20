@@ -10,13 +10,14 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
+// FINAL-VERSION-CHECK-CALENDAR
+
 moment.locale('en-gb');
 
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
 const API_URL = 'https://my-rota-api.onrender.com'; // Your Live Render URL
 
-// --- (GlobalStyles and customStyles remain the same) ---
 const GlobalStyles = () => (
   <style jsx global>{`
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -92,7 +93,6 @@ function ShiftCalendar({ loggedInUser }) {
     const [shiftStartTime, setShiftStartTime] = useState('09:00');
     const [shiftEndTime, setShiftEndTime] = useState('17:00');
     const [selectedUserId, setSelectedUserId] = useState('');
-    // --- NEW: State for recurrence options in the modal ---
     const [isRecurring, setIsRecurring] = useState(false);
     const [recurrenceMonths, setRecurrenceMonths] = useState(3);
     const [updateScope, setUpdateScope] = useState('single');
@@ -117,8 +117,10 @@ function ShiftCalendar({ loggedInUser }) {
     }, []);
 
     useEffect(() => {
-        fetchShifts();
-    }, [navDate, view]);
+        if(loggedInUser) {
+            fetchShifts();
+        }
+    }, [navDate, view, loggedInUser]);
 
     const formatEvent = (shift) => ({
         id: shift.id,
@@ -131,12 +133,11 @@ function ShiftCalendar({ loggedInUser }) {
     
     const handleSelectSlot = (slotInfo) => {
         setSelectedEvent(null);
-        // ... (logic for setting default times remains the same)
         setShiftDate(moment(slotInfo.start).format('YYYY-MM-DD'));
         setShiftStartTime(moment(slotInfo.start).format('HH:mm'));
         setShiftEndTime(moment(slotInfo.end).format('HH:mm'));
         setSelectedUserId('');
-        setIsRecurring(false); // Default to not recurring
+        setIsRecurring(false);
         setModalIsOpen(true);
     };
 
@@ -146,8 +147,8 @@ function ShiftCalendar({ loggedInUser }) {
         setShiftStartTime(moment(event.start).format('HH:mm'));
         setShiftEndTime(moment(event.end).format('HH:mm'));
         setSelectedUserId(event.userId || '');
-        setIsRecurring(!!event.recurring_shift_id); // Check if it's part of a series
-        setUpdateScope('single'); // Default edit scope
+        setIsRecurring(!!event.recurring_shift_id);
+        setUpdateScope('single');
         setModalIsOpen(true);
     };
     
@@ -162,7 +163,7 @@ function ShiftCalendar({ loggedInUser }) {
 
         axios.post(`${API_URL}/shifts`, payload)
             .then(() => {
-                fetchShifts(); // Refetch all shifts to see the new series
+                fetchShifts(); 
                 closeModal();
             })
             .catch(err => { console.error("Error saving shift", err); alert("Could not save shift."); });
@@ -178,7 +179,7 @@ function ShiftCalendar({ loggedInUser }) {
 
         axios.put(`${API_URL}/shifts/${selectedEvent.id}`, payload)
             .then(() => {
-                fetchShifts(); // Refetch to see updated series
+                fetchShifts();
                 closeModal();
             })
             .catch(err => { console.error("Error updating shift", err); alert("Could not update shift."); });
@@ -189,7 +190,7 @@ function ShiftCalendar({ loggedInUser }) {
 
         axios.delete(`${API_URL}/shifts/${selectedEvent.id}`, { data: { apply_to_all: updateScope === 'all' } })
             .then(() => {
-                fetchShifts(); // Refetch to see updated series
+                fetchShifts(); 
                 closeModal();
             })
             .catch(err => { console.error("Error deleting shift", err); alert("Could not delete shift."); });
@@ -214,7 +215,6 @@ function ShiftCalendar({ loggedInUser }) {
                     eventPropGetter={eventStyleGetter} date={navDate} view={view} onNavigate={setNavDate} onView={setView}
                 />
             </div>
-            {/* The weekly hours summary can be re-added here if desired by admin */}
 
             <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
@@ -222,7 +222,6 @@ function ShiftCalendar({ loggedInUser }) {
                   <button onClick={closeModal} style={{background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#888'}}>&times;</button>
                 </div>
                 
-                {/* --- Form Fields --- */}
                 <div style={{display: 'flex', flexDirection:'column', gap: '16px', marginBottom: '20px'}}>
                     <TimePicker label="Start Time" value={shiftStartTime} onChange={setShiftStartTime} />
                     <TimePicker label="End Time" value={shiftEndTime} onChange={setShiftEndTime} />
@@ -233,7 +232,6 @@ function ShiftCalendar({ loggedInUser }) {
                         </select>
                     </label>
 
-                    {/* --- Recurrence Options (only shows on create) --- */}
                     {!selectedEvent && (
                         <div>
                             <label style={{display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500}}>
@@ -253,7 +251,6 @@ function ShiftCalendar({ loggedInUser }) {
                         </div>
                     )}
 
-                    {/* --- Edit Scope Options (only shows on edit of recurring) --- */}
                     {selectedEvent && selectedEvent.recurring_shift_id && (
                         <div style={{marginTop: '10px', borderTop: '1px solid #eee', paddingTop: '15px'}}>
                             <h4 style={{margin: '0 0 10px 0', fontWeight: 600}}>Edit Options</h4>

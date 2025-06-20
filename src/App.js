@@ -3,6 +3,8 @@ import axios from 'axios';
 import ShiftCalendar from './ShiftCalendar';
 import UserManagement from './UserManagement'; 
 
+// FINAL-VERSION-CHECK-APP
+
 const API_URL = 'https://my-rota-api.onrender.com'; // Replace with your actual Render URL
 
 function App() {
