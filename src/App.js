@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ShiftCalendar from './ShiftCalendar';
 import UserManagement from './UserManagement'; 
-import RecurringShiftsManagement from './RecurringShiftsManagement';
+import RecurringShiftsManagement from './RecurringShiftsManagement'; // Import the new component
 
-// --- UPDATED: Use the live Render URL for the deployed application ---
 const API_URL = 'https://my-rota-api.onrender.com'; // Replace with your actual Render URL
 
 function App() {
@@ -13,11 +12,13 @@ function App() {
   const [loggedInUser, setLoggedInUser] = useState(null);
 
   useEffect(() => {
+    // Check for stored user on load
     const storedUser = localStorage.getItem('rotaAppUser');
     if (storedUser) {
         setLoggedInUser(JSON.parse(storedUser));
     }
     
+    // Fetch users for login dropdown
     axios.get(`${API_URL}/users`)
         .then(response => { setUsers(response.data); })
         .catch(error => { console.error('Error fetching users for login!', error); });
@@ -34,6 +35,7 @@ function App() {
     setCurrentPage('calendar'); 
   };
 
+  // Login component moved inside App for simplicity
   const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -92,6 +94,7 @@ function App() {
               </button>
               {loggedInUser.role === 'admin' && (
                 <>
+                  {/* --- THIS IS THE NEW BUTTON --- */}
                   <button style={currentPage === 'recurringShifts' ? activeLinkStyle : navLinkStyle} onClick={() => setCurrentPage('recurringShifts')}>
                     Recurring Shifts
                   </button>
@@ -119,6 +122,7 @@ function App() {
         {currentPage === 'userManagement' && loggedInUser.role === 'admin' && (
           <div style={{maxWidth: '800px', margin: '0 auto'}}> <UserManagement /> </div>
         )}
+        {/* --- NEW: Renders the new page when the button is clicked --- */}
         {currentPage === 'recurringShifts' && loggedInUser.role === 'admin' && (
           <div style={{maxWidth: '800px', margin: '0 auto'}}> <RecurringShiftsManagement /> </div>
         )}
