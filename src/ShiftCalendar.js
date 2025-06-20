@@ -135,15 +135,25 @@ function ShiftCalendar({ loggedInUser }) {
     const generateColor = (id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length];
     const eventStyleGetter = (event) => ({ style: { backgroundColor: generateColor(event.userId) } });
 
+    // --- UPDATED useEffect to include date range parameters ---
     useEffect(() => {
-        const fetchShifts = axios.get(`${API_URL}/shifts?start_date=${moment(navDate).startOf('month').toISOString()}&end_date=${moment(navDate).endOf('month').toISOString()}`);
         const fetchUsers = axios.get(`${API_URL}/users`);
+
+        // Determine the date range based on the current view
+        const startDate = moment(navDate).startOf(view === 'month' ? 'month' : 'week').toISOString();
+        const endDate = moment(navDate).endOf(view === 'month' ? 'month' : 'week').toISOString();
+        const fetchShifts = axios.get(`${API_URL}/shifts?start_date=${startDate}&end_date=${endDate}`);
+
         Promise.all([fetchShifts, fetchUsers]).then(([shiftsResponse, usersResponse]) => {
             const formattedEvents = shiftsResponse.data.map(shift => formatEvent(shift));
             setEvents(formattedEvents);
             setUsers(usersResponse.data);
-        }).catch(err => { console.error('Error fetching data!', err); setError('Could not fetch initial data.'); });
-    }, [navDate]);
+            setError(''); // Clear error on success
+        }).catch(err => { 
+            console.error('Error fetching data!', err); 
+            setError('Could not fetch shift data.'); 
+        });
+    }, [navDate, view]); // Re-fetch when the date or view changes
     
     const handleMoveOrResize = ({ event, start, end }) => {
         const originalEvents = [...events];
