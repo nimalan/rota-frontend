@@ -55,6 +55,7 @@ function RecurringShiftsManagement() {
             .then(response => {
                 setRecurringShifts(prev => [...prev, response.data].sort((a,b) => a.day_of_week - b.day_of_week));
                 setSuccess('New recurring shift template added successfully!');
+                // Optional: reset form fields
                 setSelectedUserId('');
             })
             .catch(error => {

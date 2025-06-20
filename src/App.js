@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ShiftCalendar from './ShiftCalendar';
 import UserManagement from './UserManagement'; 
-import RecurringShiftsManagement from './RecurringShiftsManagement'; // Import the new component
+import RecurringShiftsManagement from './RecurringShiftsManagement'; // --- NEW: Import the component ---
 
 const API_URL = 'https://my-rota-api.onrender.com'; // Replace with your actual Render URL
 
@@ -75,6 +75,7 @@ function App() {
 
   const activeLinkStyle = { ...navLinkStyle, backgroundColor: '#e9ecef', color: '#007bff' };
   
+  // Render Logic
   if (!loggedInUser) {
     return <Login />;
   }
@@ -94,7 +95,7 @@ function App() {
               </button>
               {loggedInUser.role === 'admin' && (
                 <>
-                  {/* --- THIS IS THE NEW BUTTON --- */}
+                  {/* --- NEW: Recurring Shifts Page Link --- */}
                   <button style={currentPage === 'recurringShifts' ? activeLinkStyle : navLinkStyle} onClick={() => setCurrentPage('recurringShifts')}>
                     Recurring Shifts
                   </button>
@@ -122,7 +123,7 @@ function App() {
         {currentPage === 'userManagement' && loggedInUser.role === 'admin' && (
           <div style={{maxWidth: '800px', margin: '0 auto'}}> <UserManagement /> </div>
         )}
-        {/* --- NEW: Renders the new page when the button is clicked --- */}
+        {/* --- NEW: Conditional rendering for the new page --- */}
         {currentPage === 'recurringShifts' && loggedInUser.role === 'admin' && (
           <div style={{maxWidth: '800px', margin: '0 auto'}}> <RecurringShiftsManagement /> </div>
         )}
