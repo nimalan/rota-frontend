@@ -77,6 +77,60 @@ const TimePicker = ({ value, onChange, label }) => {
     );
 };
 
+// --- RE-ADDED: Weekly Hours Summary Component ---
+const WeeklyHoursSummary = ({ events, users, currentDate }) => {
+    const weeklyHours = useMemo(() => {
+        const startOfWeek = moment(currentDate).startOf('week');
+        const endOfWeek = moment(currentDate).endOf('week');
+        
+        const relevantEvents = events.filter(event => 
+            moment(event.start).isBetween(startOfWeek, endOfWeek, undefined, '[]')
+        );
+
+        const hoursByUser = {};
+
+        // Initialize all users with 0 hours
+        users.forEach(user => {
+            hoursByUser[user.id] = { name: user.username, hours: 0 };
+        });
+
+        relevantEvents.forEach(event => {
+            if (event.userId) {
+                const duration = moment.duration(moment(event.end).diff(moment(event.start)));
+                const hours = duration.asHours();
+                if (hoursByUser[event.userId]) {
+                    hoursByUser[event.userId].hours += hours;
+                }
+            }
+        });
+
+        return Object.values(hoursByUser).sort((a,b) => b.hours - a.hours);
+
+    }, [events, users, currentDate]);
+
+    return (
+        <div style={{
+            marginTop: '20px',
+            padding: '20px', 
+            backgroundColor: 'white', 
+            borderRadius: '12px', 
+            boxShadow: '0 4px 12px rgba(0,0,0,0.08)' 
+        }}>
+            <h3 style={{ marginTop: 0, borderBottom: '2px solid #eee', paddingBottom: '10px' }}>
+                Weekly Hours Summary ({moment(currentDate).startOf('week').format('MMM D')} - {moment(currentDate).endOf('week').format('MMM D')})
+            </h3>
+            <ul style={{listStyle: 'none', padding: 0, margin: 0}}>
+                {weeklyHours.map(user => (
+                    user.hours > 0 && <li key={user.name} style={{display: 'flex', justifyContent: 'space-between', padding: '10px 5px', borderBottom: '1px solid #f0f0f0'}}>
+                        <span style={{fontWeight: 500}}>{user.name}</span>
+                        <span style={{fontWeight: 600, color: '#007bff'}}>{user.hours.toFixed(2)} hours</span>
+                    </li>
+                ))}
+            </ul>
+        </div>
+    );
+};
+
 
 Modal.setAppElement('#root');
 
@@ -110,10 +164,6 @@ function ShiftCalendar({ loggedInUser }) {
         recurring_shift_id: shift.recurring_shift_id
     }), []);
 
-    useEffect(() => {
-        axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
-    }, []);
-
     const fetchShifts = useCallback(() => {
         const startDate = moment(navDate).startOf(view === 'month' ? 'month' : 'week').toISOString();
         const endDate = moment(navDate).endOf(view === 'month' ? 'month' : 'week').toISOString();
@@ -124,6 +174,10 @@ function ShiftCalendar({ loggedInUser }) {
             })
             .catch(err => console.error("Could not fetch shifts", err));
     }, [navDate, view, formatEvent]);
+
+    useEffect(() => {
+        axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
+    }, []);
 
     useEffect(() => {
         if(loggedInUser) {
@@ -216,6 +270,11 @@ function ShiftCalendar({ loggedInUser }) {
                     eventPropGetter={eventStyleGetter} date={navDate} view={view} onNavigate={setNavDate} onView={setView}
                 />
             </div>
+
+            {/* --- RE-ADDED: Conditional rendering for the summary --- */}
+            {loggedInUser?.role === 'admin' && (
+                <WeeklyHoursSummary events={events} users={users} currentDate={navDate} />
+            )}
 
             <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
