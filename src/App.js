@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ShiftCalendar from './ShiftCalendar';
 import UserManagement from './UserManagement'; 
+import HolidayManagement from './HolidayManagement'; // Import the new component
 
-// FINAL-VERSION-CHECK-APP
-
-const API_URL = 'https://my-rota-api.onrender.com'; // Replace with your actual Render URL
+const API_URL = 'https://my-rota-api.onrender.com'; // Your live Render URL
 
 function App() {
   const [currentPage, setCurrentPage] = useState('calendar');
@@ -18,18 +17,16 @@ function App() {
     }
   }, []);
 
+  // ... (Login logic remains the same) ...
   const handleLoginSuccess = (user) => {
     localStorage.setItem('rotaAppUser', JSON.stringify(user));
     setLoggedInUser(user);
   };
-
   const handleLogout = () => {
     localStorage.removeItem('rotaAppUser');
     setLoggedInUser(null);
     setCurrentPage('calendar'); 
   };
-
-  // Login component
   const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -52,11 +49,10 @@ function App() {
         </div>
     );
   };
-  
   const navLinkStyle = { background: 'none', border: 'none', padding: '10px 15px', cursor: 'pointer', fontSize: '1rem', fontWeight: 500, borderRadius: '6px', marginLeft: '5px' };
   const activeLinkStyle = { ...navLinkStyle, backgroundColor: '#e9ecef', color: '#007bff' };
-  
   if (!loggedInUser) return <Login />;
+
 
   return (
     <div style={{ backgroundColor: '#f4f7f6', minHeight: '100vh' }}>
@@ -65,6 +61,8 @@ function App() {
         <div style={{display: 'flex', alignItems: 'center', gap: '20px'}}>
             <nav>
               <button style={currentPage === 'calendar' ? activeLinkStyle : navLinkStyle} onClick={() => setCurrentPage('calendar')}>Calendar</button>
+              {/* --- NEW: Holiday Page Link (visible to all logged-in users) --- */}
+              <button style={currentPage === 'holidays' ? activeLinkStyle : navLinkStyle} onClick={() => setCurrentPage('holidays')}>Holidays</button>
               {loggedInUser.role === 'admin' && (
                 <button style={currentPage === 'userManagement' ? activeLinkStyle : navLinkStyle} onClick={() => setCurrentPage('userManagement')}>User Management</button>
               )}
@@ -75,6 +73,7 @@ function App() {
             </div>
         </div>
       </header>
+      
       <main style={{ padding: '20px' }}>
         {currentPage === 'calendar' && (
           <div style={{backgroundColor: 'white', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)'}}>
@@ -83,6 +82,12 @@ function App() {
         )}
         {currentPage === 'userManagement' && loggedInUser.role === 'admin' && (
           <div style={{maxWidth: '800px', margin: '0 auto'}}> <UserManagement /> </div>
+        )}
+        {/* --- NEW: Renders the holiday management page --- */}
+        {currentPage === 'holidays' && (
+            <div style={{maxWidth: '1200px', margin: '0 auto'}}>
+                <HolidayManagement loggedInUser={loggedInUser} />
+            </div>
         )}
       </main>
     </div>
