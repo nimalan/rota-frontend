@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V4
+// FINAL-VERSION-CHECK-CALENDAR-V5
 
 moment.locale('en-gb');
 
@@ -153,6 +153,7 @@ function ShiftCalendar({ loggedInUser }) {
         setModalIsOpen(true);
     };
     
+    // --- UPDATED: Save handler now optimistically updates UI ---
     const handleSave = () => {
         const payload = {
             start_time: new Date(`${shiftDate}T${shiftStartTime}`).toISOString(),
@@ -163,13 +164,17 @@ function ShiftCalendar({ loggedInUser }) {
         };
 
         axios.post(`${API_URL}/shifts`, payload)
-            .then(() => {
-                fetchShifts(); 
+            .then((response) => {
+                const newEvents = Array.isArray(response.data)
+                    ? response.data.map(shift => formatEvent(shift))
+                    : [formatEvent(response.data)];
+                setEvents(prev => [...prev, ...newEvents]);
                 closeModal();
             })
             .catch(err => { console.error("Error saving shift", err); alert("Could not save shift."); });
     };
 
+    // --- UPDATED: Update handler now optimistically updates UI ---
     const handleUpdate = () => {
         const payload = {
             start_time: new Date(`${shiftDate}T${shiftStartTime}`).toISOString(),
@@ -179,22 +184,59 @@ function ShiftCalendar({ loggedInUser }) {
         };
 
         axios.put(`${API_URL}/shifts/${selectedEvent.id}`, payload)
-            .then(() => {
-                fetchShifts();
+            .then((response) => {
+                const updatedShifts = Array.isArray(response.data)
+                    ? response.data.map(shift => formatEvent(shift))
+                    : [formatEvent(response.data)];
+
+                let newEvents = [...events];
+                if (updateScope === 'all' && selectedEvent.recurring_shift_id) {
+                    newEvents = events.filter(e => e.recurring_shift_id !== selectedEvent.recurring_shift_id);
+                } else {
+                    newEvents = events.filter(e => e.id !== selectedEvent.id);
+                }
+                
+                setEvents([...newEvents, ...updatedShifts]);
                 closeModal();
             })
             .catch(err => { console.error("Error updating shift", err); alert("Could not update shift."); });
     };
 
+    // --- UPDATED: Delete handler now optimistically updates UI ---
     const handleDelete = () => {
         if (!window.confirm(`Are you sure? This will delete ${updateScope === 'all' ? 'this and all future recurring shifts' : 'only this shift'}.`)) return;
 
         axios.delete(`${API_URL}/shifts/${selectedEvent.id}`, { data: { apply_to_all: updateScope === 'all' } })
             .then(() => {
-                fetchShifts(); 
+                if (updateScope === 'all' && selectedEvent.recurring_shift_id) {
+                    setEvents(prev => prev.filter(e => e.recurring_shift_id !== selectedEvent.recurring_shift_id));
+                } else {
+                    setEvents(prev => prev.filter(e => e.id !== selectedEvent.id));
+                }
                 closeModal();
             })
             .catch(err => { console.error("Error deleting shift", err); alert("Could not delete shift."); });
+    };
+
+    // --- NEW: Dedicated handler for drag-and-drop updates ---
+    const handleEventUpdate = ({ event, start, end }) => {
+        const payload = {
+            start_time: start.toISOString(),
+            end_time: end.toISOString(),
+            user_id: event.userId,
+            apply_to_all: false, 
+        };
+
+        axios.put(`${API_URL}/shifts/${event.id}`, payload)
+            .then(response => {
+                const updatedEvent = formatEvent(response.data);
+                setEvents(prev => prev.map(e => e.id === updatedEvent.id ? updatedEvent : e));
+            })
+            .catch(err => {
+                console.error("Error updating shift via drag", err);
+                alert("Could not update shift.");
+                fetchShifts(); // Revert on failure
+            });
     };
 
     const closeModal = () => { setModalIsOpen(false); setSelectedEvent(null); };
@@ -211,7 +253,7 @@ function ShiftCalendar({ loggedInUser }) {
                 <DraggableCalendar
                     localizer={localizer} events={events} style={{ height: '100%' }}
                     selectable={true} onSelectSlot={handleSelectSlot} onSelectEvent={handleSelectEvent}
-                    resizable onEventDrop={handleUpdate} onEventResize={handleUpdate}
+                    resizable onEventDrop={handleEventUpdate} onEventResize={handleEventUpdate} // Use new handler
                     min={minTime} max={maxTime} defaultView="week"
                     eventPropGetter={eventStyleGetter} date={navDate} view={view} onNavigate={setNavDate} onView={setView}
                 />
@@ -224,7 +266,6 @@ function ShiftCalendar({ loggedInUser }) {
                 </div>
                 
                 <div style={{display: 'flex', flexDirection:'column', gap: '16px', marginBottom: '20px'}}>
-                    {/* --- THIS DATE INPUT IS NOW RESTORED --- */}
                     <div>
                         <label style={{display: 'block', marginBottom: '6px', fontWeight: 500}}>Date</label>
                         <input type="date" value={shiftDate} onChange={e => setShiftDate(e.target.value)} style={{width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #ccc'}}/>
