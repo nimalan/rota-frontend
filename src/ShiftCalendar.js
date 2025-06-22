@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V7
+// FINAL-VERSION-CHECK-CALENDAR-V8
 
 moment.locale('en-gb');
 
@@ -138,8 +138,10 @@ function ShiftCalendar({ loggedInUser }) {
     const [recurrenceMonths, setRecurrenceMonths] = useState(3);
     const [updateScope, setUpdateScope] = useState('single');
 
-    const colorPalette = ['#3174ad', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6610f2'];
-    const generateColor = useCallback((id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length], []);
+    const colorPalette = useMemo(() => ['#3174ad', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6610f2'], []);
+    
+    // --- THIS IS THE FIX ---
+    const generateColor = useCallback((id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length], [colorPalette]);
     
     const eventStyleGetter = useCallback((event) => {
         let style = { borderRadius: '6px', opacity: 0.9, color: 'white', border: '0px', display: 'block' };
