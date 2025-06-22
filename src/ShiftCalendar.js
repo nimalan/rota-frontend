@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V6
+// FINAL-VERSION-CHECK-CALENDAR-V7
 
 moment.locale('en-gb');
 
@@ -165,15 +165,15 @@ function ShiftCalendar({ loggedInUser }) {
     }), []);
 
     const fetchAllEvents = useCallback(() => {
-        const startDate = moment(navDate).startOf(view === 'month' ? 'month' : 'week').toISOString();
-        const endDate = moment(navDate).endOf(view === 'month' ? 'month' : 'week').toISOString();
+        const startDate = moment(navDate).startOf(view).toISOString();
+        const endDate = moment(navDate).endOf(view).toISOString();
         const fetchShifts = axios.get(`${API_URL}/shifts`, { params: { start_date: startDate, end_date: endDate }});
         const fetchHolidays = axios.get(`${API_URL}/holidays`);
         
         Promise.all([fetchShifts, fetchHolidays])
             .then(([shiftsResponse, holidaysResponse]) => {
-                const shiftEvents = shiftsResponse.data.map(shift => formatShiftEvent(shift));
-                const holidayEvents = holidaysResponse.data.map(holiday => formatHolidayEvent(holiday));
+                const shiftEvents = shiftsResponse.data.map(formatShiftEvent);
+                const holidayEvents = holidaysResponse.data.map(formatHolidayEvent);
                 setEvents([...shiftEvents, ...holidayEvents]);
             }).catch(err => console.error("Could not fetch events", err));
     }, [navDate, view, formatShiftEvent, formatHolidayEvent]);
@@ -226,37 +226,32 @@ function ShiftCalendar({ loggedInUser }) {
             user_id: selectedUserId ? parseInt(selectedUserId) : null,
             apply_to_all: updateScope === 'all',
         };
-        axios.put(`${API_URL}/shifts/${selectedEvent.id.replace('shift-','')}`, payload).then(() => { fetchAllEvents(); closeModal(); })
+        const shiftId = String(selectedEvent.id).replace('shift-', '');
+        axios.put(`${API_URL}/shifts/${shiftId}`, payload).then(() => { fetchAllEvents(); closeModal(); })
             .catch(err => { console.error("Error updating shift", err); alert("Could not update shift."); });
     };
     
     const handleDelete = () => {
         if (!window.confirm(`Are you sure? This will delete ${updateScope === 'all' ? 'this and all future recurring shifts' : 'only this shift'}.`)) return;
-        axios.delete(`${API_URL}/shifts/${selectedEvent.id.replace('shift-','')}`, { data: { apply_to_all: updateScope === 'all' } }).then(() => { fetchAllEvents(); closeModal(); })
+        const shiftId = String(selectedEvent.id).replace('shift-', '');
+        axios.delete(`${API_URL}/shifts/${shiftId}`, { data: { apply_to_all: updateScope === 'all' } }).then(() => { fetchAllEvents(); closeModal(); })
             .catch(err => { console.error("Error deleting shift", err); alert("Could not delete shift."); });
     };
 
-    // --- THIS IS THE FIX ---
-    // A dedicated handler for drag-and-drop updates
     const handleEventDrop = ({ event, start, end }) => {
-        if (event.isHoliday) return; // Prevent dragging holidays
-    
-        const originalEvents = [...events];
-        const updatedEvents = events.map(e => e.id === event.id ? { ...e, start, end } : e);
-        setEvents(updatedEvents);
-
+        if (event.isHoliday) return;
         const payload = {
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             user_id: event.userId,
-            apply_to_all: false, // Drag-and-drop always applies to a single event
+            apply_to_all: false, 
         };
-    
-        axios.put(`${API_URL}/shifts/${event.id.replace('shift-', '')}`, payload)
+        const shiftId = String(event.id).replace('shift-', '');
+        axios.put(`${API_URL}/shifts/${shiftId}`, payload).then(() => fetchAllEvents())
             .catch(err => {
                 console.error("Error updating shift via drag", err);
-                alert("Could not update shift. Reverting.");
-                setEvents(originalEvents); // Revert on failure
+                alert("Could not update shift.");
+                fetchAllEvents();
             });
     };
     
