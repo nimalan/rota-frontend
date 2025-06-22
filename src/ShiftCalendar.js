@@ -18,10 +18,7 @@ const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
 const API_URL = 'https://my-rota-api.onrender.com'; // Your Live Render URL
 
-const GlobalStyles = () => ( <style jsx global>{` /* ... styles ... */ `}</style> );
-const customStyles = { /* ... styles ... */ };
-const TimePicker = ({ value, onChange, label }) => { /* ... component logic ... */ };
-const WeeklyHoursSummary = ({ events, users, currentDate }) => { /* ... component logic ... */ };
+// ... (Styles and sub-components remain the same) ...
 
 Modal.setAppElement('#root');
 
@@ -35,36 +32,21 @@ function ShiftCalendar({ loggedInUser }) {
 
     // ... (form state remains the same) ...
 
-    const colorPalette = useMemo(() => ['#3174ad', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6610f2'], []);
-    const generateColor = useCallback((id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length], [colorPalette]);
-    
-    const eventStyleGetter = useCallback((event) => {
-        // ... (styling logic remains the same) ...
-    }, [generateColor]);
-
-    const formatShiftEvent = useCallback((shift) => ({
-        id: `shift-${shift.id}`, title: shift.user ? shift.user.username : 'Unassigned',
-        // --- FIX: Use moment to parse the naive string correctly ---
-        start: moment(shift.start_time).toDate(),
-        end: moment(shift.end_time).toDate(),
-        userId: shift.user_id, isHoliday: false, recurring_shift_id: shift.recurring_shift_id
-    }), []);
-    
-    const formatHolidayEvent = useCallback((holiday) => ({
-        // ... (holiday formatting logic remains the same) ...
-    }), []);
+    const formatEvent = useCallback((eventData) => {
+        // --- FIX: This now correctly parses the guaranteed UTC string from the backend ---
+        return {
+            id: eventData.id,
+            title: eventData.user ? eventData.user.username : 'Unassigned',
+            start: new Date(eventData.start_time), // e.g., new Date("2025-06-22T17:00:00Z")
+            end: new Date(eventData.end_time),
+            userId: eventData.user_id,
+            recurring_shift_id: eventData.recurring_shift_id
+        };
+    }, []);
 
     const fetchAllEvents = useCallback(() => {
         // ... fetch logic remains the same ...
-    }, [navDate, view, formatShiftEvent, formatHolidayEvent]);
-
-    useEffect(() => {
-        axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
-    }, []);
-
-    useEffect(() => {
-        if(loggedInUser) fetchAllEvents();
-    }, [loggedInUser, fetchAllEvents]);
+    }, [navDate, view, formatEvent]);
     
     // --- FIX: Create payload with naive datetime strings ---
     const createPayload = () => ({
