@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V14
+// FINAL-VERSION-CHECK-CALENDAR-V17
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -38,28 +38,26 @@ function ShiftCalendar({ loggedInUser }) {
         };
     }, []);
 
-    const formatHolidayEvent = useCallback((holiday) => {
-        return {
-            id: `holiday-${holiday.id}`,
-            title: `${holiday.user.username} Holiday (${holiday.status})`,
-            start: moment(holiday.start_date).toDate(),
-            end: moment(holiday.end_date).add(1, 'days').toDate(),
-            allDay: true,
-            isHoliday: true,
-            status: holiday.status
-        };
-    }, []);
-    
     // ... (fetchAllEvents and other useEffects remain the same) ...
     
+    // --- FIX: Create payload by converting local time to UTC ISO string ---
     const createPayload = () => ({
-        // --- FIX: Send full UTC ISO string to backend ---
         start_time: moment.utc(`${shiftDate}T${shiftStartTime}`).toISOString(),
         end_time: moment.utc(`${shiftDate}T${shiftEndTime}`).toISOString(),
         user_id: selectedUserId ? parseInt(selectedUserId) : null,
     });
     
-    // ... (all handler functions remain the same) ...
+    const handleSave = () => {
+        const payload = {
+            ...createPayload(),
+            is_recurring: isRecurring,
+            recurrence_months: recurrenceMonths,
+        };
+        axios.post(`${API_URL}/shifts`, payload).then(() => { fetchAllEvents(); closeModal(); })
+            .catch(err => { console.error("Error saving shift", err); alert("Could not save shift."); });
+    };
+
+    // ... (other handlers updated to use new payload logic) ...
 
     return (
         <div>
