@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V5
+// FINAL-VERSION-CHECK-CALENDAR-V6
 
 moment.locale('en-gb');
 
@@ -139,7 +139,7 @@ function ShiftCalendar({ loggedInUser }) {
     const [updateScope, setUpdateScope] = useState('single');
 
     const colorPalette = ['#3174ad', '#28a745', '#ffc107', '#dc3545', '#6f42c1', '#fd7e14', '#20c997', '#6610f2'];
-    const generateColor = useCallback((id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length], [colorPalette]);
+    const generateColor = useCallback((id) => !id ? '#6c757d' : colorPalette[id % colorPalette.length], []);
     
     const eventStyleGetter = useCallback((event) => {
         let style = { borderRadius: '6px', opacity: 0.9, color: 'white', border: '0px', display: 'block' };
@@ -236,16 +236,28 @@ function ShiftCalendar({ loggedInUser }) {
             .catch(err => { console.error("Error deleting shift", err); alert("Could not delete shift."); });
     };
 
-    const handleEventUpdateByDrag = ({ event, start, end }) => {
-        if (event.isHoliday) return;
+    // --- THIS IS THE FIX ---
+    // A dedicated handler for drag-and-drop updates
+    const handleEventDrop = ({ event, start, end }) => {
+        if (event.isHoliday) return; // Prevent dragging holidays
+    
+        const originalEvents = [...events];
+        const updatedEvents = events.map(e => e.id === event.id ? { ...e, start, end } : e);
+        setEvents(updatedEvents);
+
         const payload = {
             start_time: start.toISOString(),
             end_time: end.toISOString(),
             user_id: event.userId,
-            apply_to_all: false, 
+            apply_to_all: false, // Drag-and-drop always applies to a single event
         };
-        axios.put(`${API_URL}/shifts/${event.id.replace('shift-','')}`, payload).then(() => fetchAllEvents())
-            .catch(err => { console.error("Error updating shift via drag", err); alert("Could not update shift."); fetchAllEvents(); });
+    
+        axios.put(`${API_URL}/shifts/${event.id.replace('shift-', '')}`, payload)
+            .catch(err => {
+                console.error("Error updating shift via drag", err);
+                alert("Could not update shift. Reverting.");
+                setEvents(originalEvents); // Revert on failure
+            });
     };
     
     const closeModal = () => { setModalIsOpen(false); setSelectedEvent(null); };
@@ -262,7 +274,7 @@ function ShiftCalendar({ loggedInUser }) {
                 <DraggableCalendar
                     localizer={localizer} events={events} style={{ height: '100%' }}
                     selectable={true} onSelectSlot={handleSelectSlot} onSelectEvent={handleSelectEvent}
-                    resizable onEventDrop={handleEventUpdateByDrag} onEventResize={handleEventUpdateByDrag}
+                    resizable onEventDrop={handleEventDrop} onEventResize={handleEventDrop}
                     min={minTime} max={maxTime} defaultView="week"
                     eventPropGetter={eventStyleGetter} date={navDate} view={view} onNavigate={setNavDate} onView={setView}
                 />
