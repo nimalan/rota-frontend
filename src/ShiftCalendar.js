@@ -10,10 +10,8 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V11
-
+// FINAL-VERSION-CHECK-CALENDAR-V13
 moment.locale('en-gb');
-
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
 const API_URL = 'https://my-rota-api.onrender.com'; // Your Live Render URL
@@ -29,7 +27,6 @@ function ShiftCalendar({ loggedInUser }) {
     const [selectedEvent, setSelectedEvent] = useState(null);
     const [navDate, setNavDate] = useState(new Date());
     const [view, setView] = useState('week');
-
     // ... (form state remains the same) ...
 
     const formatEvent = useCallback((eventData) => {
@@ -43,15 +40,13 @@ function ShiftCalendar({ loggedInUser }) {
             recurring_shift_id: eventData.recurring_shift_id
         };
     }, []);
-
-    const fetchAllEvents = useCallback(() => {
-        // ... fetch logic remains the same ...
-    }, [navDate, view, formatEvent]);
     
-    // --- FIX: Create payload with naive datetime strings ---
+    // ... (fetchAllEvents and other useEffects remain the same) ...
+
+    // --- FIX: Create payload by converting local time to UTC ISO string ---
     const createPayload = () => ({
-        start_time: `${shiftDate}T${shiftStartTime}:00`,
-        end_time: `${shiftDate}T${shiftEndTime}:00`,
+        start_time: moment(`${shiftDate} ${shiftStartTime}`).toISOString(),
+        end_time: moment(`${shiftDate} ${shiftEndTime}`).toISOString(),
         user_id: selectedUserId ? parseInt(selectedUserId) : null,
     });
 
