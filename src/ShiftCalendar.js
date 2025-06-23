@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V22
+// FINAL-VERSION-CHECK-CALENDAR-V23
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -117,7 +117,6 @@ const WeeklyHoursSummary = ({ events, users, currentDate }) => {
     );
 };
 
-
 Modal.setAppElement('#root');
 
 function ShiftCalendar({ loggedInUser }) {
@@ -128,7 +127,6 @@ function ShiftCalendar({ loggedInUser }) {
     const [navDate, setNavDate] = useState(new Date());
     const [view, setView] = useState('week');
 
-    // Form state
     const [shiftDate, setShiftDate] = useState('');
     const [shiftStartTime, setShiftStartTime] = useState('09:00');
     const [shiftEndTime, setShiftEndTime] = useState('17:00');
@@ -252,7 +250,6 @@ function ShiftCalendar({ loggedInUser }) {
     const closeModal = () => {
         setModalIsOpen(false);
         setSelectedEvent(null);
-        // Reset form state on close
         setShiftDate('');
         setShiftStartTime('09:00');
         setShiftEndTime('17:00');
