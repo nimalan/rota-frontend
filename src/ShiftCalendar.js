@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
 import moment from 'moment'; // Using standard moment
 import 'moment/locale/en-gb';
@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V26
+// FINAL-VERSION-CHECK-CALENDAR-V27
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -32,7 +32,6 @@ function ShiftCalendar({ loggedInUser }) {
     const [users, setUsers] = useState([]);
     const [modalIsOpen, setModalIsOpen] = useState(false);
 
-    // --- NEW: State to track the calendar's current date and view ---
     const [navDate, setNavDate] = useState(new Date());
     const [view, setView] = useState('week');
 
@@ -43,6 +42,26 @@ function ShiftCalendar({ loggedInUser }) {
     const [selectedUserId, setSelectedUserId] = useState('');
     const [editingEvent, setEditingEvent] = useState(null);
 
+    // --- NEW: Color coding logic ---
+    const colorPalette = useMemo(() => ['#E27D60', '#85DCB0', '#E8A87C', '#C38D9E', '#41B3A3', '#6f42c1', '#fd7e14'], []);
+    const generateColor = useCallback((userId) => {
+        if (!userId) return '#6c757d'; // Default grey for unassigned
+        return colorPalette[userId % colorPalette.length];
+    }, [colorPalette]);
+
+    const eventStyleGetter = useCallback((event) => {
+        const backgroundColor = generateColor(event.userId);
+        const style = {
+            backgroundColor,
+            borderRadius: '6px',
+            opacity: 0.8,
+            color: 'white',
+            border: '0px',
+            display: 'block'
+        };
+        return { style };
+    }, [generateColor]);
+
 
     const formatEvent = useCallback((shift) => ({
         id: `shift-${shift.id}`,
@@ -52,9 +71,7 @@ function ShiftCalendar({ loggedInUser }) {
         userId: shift.user_id,
     }), []);
 
-    // --- UPDATED: This function now depends on the current date and view ---
     const fetchShifts = useCallback(() => {
-        // Determine the date range based on the current calendar view
         const startDate = moment(navDate).startOf(view).toISOString();
         const endDate = moment(navDate).endOf(view).toISOString();
 
@@ -67,13 +84,11 @@ function ShiftCalendar({ loggedInUser }) {
     }, [navDate, view, formatEvent]);
     
     useEffect(() => {
-        // This effect still runs once to get the user list
         if(loggedInUser) {
             axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
         }
     }, [loggedInUser]);
 
-    // --- UPDATED: This effect now re-fetches shifts whenever the date/view changes ---
     useEffect(() => {
         if (loggedInUser) {
             fetchShifts();
@@ -112,7 +127,7 @@ function ShiftCalendar({ loggedInUser }) {
 
         request
             .then(() => {
-                fetchShifts(); // Refetch after saving
+                fetchShifts(); 
                 closeModal();
             })
             .catch(err => {
@@ -132,7 +147,7 @@ function ShiftCalendar({ loggedInUser }) {
             .then(fetchShifts)
             .catch((err) => {
                 console.error('Error updating shift time', err)
-                fetchShifts(); // Revert on error
+                fetchShifts(); 
             });
     };
 
@@ -152,14 +167,15 @@ function ShiftCalendar({ loggedInUser }) {
                     onSelectSlot={handleSelectSlot}
                     onSelectEvent={handleSelectEvent} 
                     selectable
-                    // --- NEW: Props to control the calendar state ---
                     onNavigate={setNavDate}
                     onView={setView}
                     date={navDate}
                     view={view}
                     onEventDrop={onEventDrop}
-                    onEventResize={onEventDrop} // Resizing is a type of drop
+                    onEventResize={onEventDrop}
                     resizable
+                    // --- NEW: Applying the color styles ---
+                    eventPropGetter={eventStyleGetter}
                 />
             </div>
 
