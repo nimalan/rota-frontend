@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment'; // We only need the standard moment library
+import moment from 'moment-timezone'; // --- THIS IS THE DEFINITIVE FIX ---
 import 'moment/locale/en-gb'; 
 import axios from 'axios';
 import Modal from 'react-modal';
@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V20
+// FINAL-VERSION-CHECK-CALENDAR-V21
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -204,20 +204,12 @@ function ShiftCalendar({ loggedInUser }) {
         setUpdateScope('single'); setModalIsOpen(true);
     };
     
-    // --- THIS IS THE FIX ---
-    const createPayload = () => {
-        // Create a moment object from the local date and time parts.
-        // Moment will correctly interpret this in the browser's local timezone (e.g., BST).
-        const localStartTime = moment(`${shiftDate}T${shiftStartTime}`);
-        const localEndTime = moment(`${shiftDate}T${shiftEndTime}`);
-    
-        return {
-            // .toISOString() will correctly convert the local moment object to a UTC string.
-            start_time: localStartTime.toISOString(),
-            end_time: localEndTime.toISOString(),
-            user_id: selectedUserId ? parseInt(selectedUserId) : null,
-        };
-    };
+    // --- THIS IS THE DEFINITIVE FIX ---
+    const createPayload = () => ({
+        start_time: moment.tz(`${shiftDate}T${shiftStartTime}`, "Europe/London").toISOString(),
+        end_time: moment.tz(`${shiftDate}T${shiftEndTime}`, "Europe/London").toISOString(),
+        user_id: selectedUserId ? parseInt(selectedUserId) : null,
+    });
 
     const handleSave = () => {
         const payload = { ...createPayload(), is_recurring: isRecurring, recurrence_months: recurrenceMonths };
@@ -275,7 +267,7 @@ function ShiftCalendar({ loggedInUser }) {
                     eventPropGetter={eventStyleGetter} date={navDate} view={view} onNavigate={setNavDate} onView={setView}
                 />
             </div>
-            {loggedInUser?.role === 'admin' && <WeeklyHoursSummary events={events} users={users} currentDate={navDate} />}
+            {loggedInUser?.role === 'admin' && <WeeklyHoursSummary events={users} users={users} currentDate={navDate} />}
             <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles}>
                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
                   <h3 style={{margin: 0, fontSize: '1.4rem', fontWeight: 600}}>{selectedEvent ? 'Edit Shift' : 'Create Shift'}</h3>
