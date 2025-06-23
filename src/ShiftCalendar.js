@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V25
+// FINAL-VERSION-CHECK-CALENDAR-V26
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -32,13 +32,15 @@ function ShiftCalendar({ loggedInUser }) {
     const [users, setUsers] = useState([]);
     const [modalIsOpen, setModalIsOpen] = useState(false);
 
+    // --- NEW: State to track the calendar's current date and view ---
+    const [navDate, setNavDate] = useState(new Date());
+    const [view, setView] = useState('week');
+
     // Form state for a simple shift
     const [shiftDate, setShiftDate] = useState('');
     const [shiftStartTime, setShiftStartTime] = useState('09:00');
     const [shiftEndTime, setShiftEndTime] = useState('17:00');
     const [selectedUserId, setSelectedUserId] = useState('');
-
-    // --- NEW: State to track which shift is being edited ---
     const [editingEvent, setEditingEvent] = useState(null);
 
 
@@ -50,27 +52,37 @@ function ShiftCalendar({ loggedInUser }) {
         userId: shift.user_id,
     }), []);
 
+    // --- UPDATED: This function now depends on the current date and view ---
     const fetchShifts = useCallback(() => {
-        const start = moment().startOf('month').startOf('week').toISOString();
-        const end = moment().endOf('month').endOf('week').toISOString();
+        // Determine the date range based on the current calendar view
+        const startDate = moment(navDate).startOf(view).toISOString();
+        const endDate = moment(navDate).endOf(view).toISOString();
 
-        axios.get(`${API_URL}/shifts`, { params: { start_date: start, end_date: end } })
+        axios.get(`${API_URL}/shifts`, { params: { start_date: startDate, end_date: endDate } })
             .then(res => {
                 const formatted = res.data.map(formatEvent);
                 setEvents(formatted);
             })
             .catch(err => console.error('Error fetching shifts', err));
-    }, [formatEvent]);
+    }, [navDate, view, formatEvent]);
     
     useEffect(() => {
+        // This effect still runs once to get the user list
         if(loggedInUser) {
             axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
+        }
+    }, [loggedInUser]);
+
+    // --- UPDATED: This effect now re-fetches shifts whenever the date/view changes ---
+    useEffect(() => {
+        if (loggedInUser) {
             fetchShifts();
         }
     }, [loggedInUser, fetchShifts]);
 
+
     const handleSelectSlot = (slotInfo) => {
-        setEditingEvent(null); // Ensure we are in "create" mode
+        setEditingEvent(null); 
         setShiftDate(moment(slotInfo.start).format('YYYY-MM-DD'));
         setShiftStartTime(moment(slotInfo.start).format('HH:mm'));
         setShiftEndTime(moment(slotInfo.end).format('HH:mm'));
@@ -78,9 +90,8 @@ function ShiftCalendar({ loggedInUser }) {
         setModalIsOpen(true);
     };
 
-    // --- NEW: Function to handle clicking on an existing event ---
     const handleSelectEvent = (event) => {
-        setEditingEvent(event); // Store the event being edited
+        setEditingEvent(event); 
         setShiftDate(moment(event.start).format('YYYY-MM-DD'));
         setShiftStartTime(moment(event.start).format('HH:mm'));
         setShiftEndTime(moment(event.end).format('HH:mm'));
@@ -88,7 +99,6 @@ function ShiftCalendar({ loggedInUser }) {
         setModalIsOpen(true);
     };
 
-    // --- UPDATED: This function now handles both Create and Update ---
     const handleSave = () => {
         const payload = {
             start_time: moment.utc(`${shiftDate}T${shiftStartTime}`).toISOString(),
@@ -102,7 +112,7 @@ function ShiftCalendar({ loggedInUser }) {
 
         request
             .then(() => {
-                fetchShifts();
+                fetchShifts(); // Refetch after saving
                 closeModal();
             })
             .catch(err => {
@@ -110,10 +120,25 @@ function ShiftCalendar({ loggedInUser }) {
                 alert("Could not save shift.");
             });
     };
+    
+    const onEventDrop = ({ event, start, end }) => {
+        const payload = {
+            start_time: moment.utc(start).toISOString(),
+            end_time: moment.utc(end).toISOString(),
+            user_id: event.userId,
+        };
+        axios
+            .put(`${API_URL}/shifts/${event.id.replace('shift-', '')}`, payload)
+            .then(fetchShifts)
+            .catch((err) => {
+                console.error('Error updating shift time', err)
+                fetchShifts(); // Revert on error
+            });
+    };
 
     const closeModal = () => {
         setModalIsOpen(false);
-        setEditingEvent(null); // Clear the editing state
+        setEditingEvent(null);
     };
 
     return (
@@ -125,13 +150,20 @@ function ShiftCalendar({ loggedInUser }) {
                     defaultView="week"
                     style={{ height: "100%" }}
                     onSelectSlot={handleSelectSlot}
-                    onSelectEvent={handleSelectEvent} // --- NEW: Handle event clicks ---
+                    onSelectEvent={handleSelectEvent} 
                     selectable
+                    // --- NEW: Props to control the calendar state ---
+                    onNavigate={setNavDate}
+                    onView={setView}
+                    date={navDate}
+                    view={view}
+                    onEventDrop={onEventDrop}
+                    onEventResize={onEventDrop} // Resizing is a type of drop
+                    resizable
                 />
             </div>
 
             <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="Shift Modal">
-                {/* --- UPDATED: Modal title changes based on editing state --- */}
                 <h2>{editingEvent ? 'Edit Shift' : 'Add Shift'}</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <label>Date: <input type="date" value={shiftDate} onChange={e => setShiftDate(e.target.value)} /></label>
