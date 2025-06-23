@@ -4,12 +4,15 @@ import moment from 'moment'; // Using standard moment
 import 'moment/locale/en-gb';
 import axios from 'axios';
 import Modal from 'react-modal';
+import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 
-// Import base calendar CSS
+// Import D&D and base calendar CSS
+import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V24
+// FINAL-VERSION-CHECK-CALENDAR-V25
 moment.locale('en-gb');
+const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
 const API_URL = 'https://my-rota-api.onrender.com'; // Your Live Render URL
 
@@ -35,9 +38,12 @@ function ShiftCalendar({ loggedInUser }) {
     const [shiftEndTime, setShiftEndTime] = useState('17:00');
     const [selectedUserId, setSelectedUserId] = useState('');
 
-    // This function now correctly parses the UTC string from the backend
+    // --- NEW: State to track which shift is being edited ---
+    const [editingEvent, setEditingEvent] = useState(null);
+
+
     const formatEvent = useCallback((shift) => ({
-        id: shift.id,
+        id: `shift-${shift.id}`,
         title: shift.user ? shift.user.username : 'Unassigned',
         start: new Date(shift.start_time),
         end: new Date(shift.end_time),
@@ -64,6 +70,7 @@ function ShiftCalendar({ loggedInUser }) {
     }, [loggedInUser, fetchShifts]);
 
     const handleSelectSlot = (slotInfo) => {
+        setEditingEvent(null); // Ensure we are in "create" mode
         setShiftDate(moment(slotInfo.start).format('YYYY-MM-DD'));
         setShiftStartTime(moment(slotInfo.start).format('HH:mm'));
         setShiftEndTime(moment(slotInfo.end).format('HH:mm'));
@@ -71,17 +78,31 @@ function ShiftCalendar({ loggedInUser }) {
         setModalIsOpen(true);
     };
 
+    // --- NEW: Function to handle clicking on an existing event ---
+    const handleSelectEvent = (event) => {
+        setEditingEvent(event); // Store the event being edited
+        setShiftDate(moment(event.start).format('YYYY-MM-DD'));
+        setShiftStartTime(moment(event.start).format('HH:mm'));
+        setShiftEndTime(moment(event.end).format('HH:mm'));
+        setSelectedUserId(event.userId || '');
+        setModalIsOpen(true);
+    };
+
+    // --- UPDATED: This function now handles both Create and Update ---
     const handleSave = () => {
-        // This payload creation method correctly converts local time to a UTC string
         const payload = {
             start_time: moment.utc(`${shiftDate}T${shiftStartTime}`).toISOString(),
             end_time: moment.utc(`${shiftDate}T${shiftEndTime}`).toISOString(),
             user_id: selectedUserId ? parseInt(selectedUserId) : null,
         };
 
-        axios.post(`${API_URL}/shifts`, payload)
+        const request = editingEvent
+            ? axios.put(`${API_URL}/shifts/${editingEvent.id.replace('shift-', '')}`, payload)
+            : axios.post(`${API_URL}/shifts`, payload);
+
+        request
             .then(() => {
-                fetchShifts(); // Refetch shifts after saving
+                fetchShifts();
                 closeModal();
             })
             .catch(err => {
@@ -92,23 +113,26 @@ function ShiftCalendar({ loggedInUser }) {
 
     const closeModal = () => {
         setModalIsOpen(false);
+        setEditingEvent(null); // Clear the editing state
     };
 
     return (
         <div>
             <div style={{ height: '80vh' }}>
-                <Calendar
+                <DraggableCalendar
                     localizer={localizer}
                     events={events}
                     defaultView="week"
                     style={{ height: "100%" }}
                     onSelectSlot={handleSelectSlot}
+                    onSelectEvent={handleSelectEvent} // --- NEW: Handle event clicks ---
                     selectable
                 />
             </div>
 
-            <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="Add Shift">
-                <h2>Add Shift</h2>
+            <Modal isOpen={modalIsOpen} onRequestClose={closeModal} style={customStyles} contentLabel="Shift Modal">
+                {/* --- UPDATED: Modal title changes based on editing state --- */}
+                <h2>{editingEvent ? 'Edit Shift' : 'Add Shift'}</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <label>Date: <input type="date" value={shiftDate} onChange={e => setShiftDate(e.target.value)} /></label>
                     <label>Start Time: <input type="time" value={shiftStartTime} onChange={e => setShiftStartTime(e.target.value)} /></label>
