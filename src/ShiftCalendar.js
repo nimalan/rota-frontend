@@ -4,14 +4,12 @@ import moment from 'moment-timezone';
 import 'moment/locale/en-gb';
 import axios from 'axios';
 import Modal from 'react-modal';
-import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 
-import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
+// Removed drag-and-drop imports
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V26
+// FINAL-VERSION-CHECK-CALENDAR-V27
 moment.locale('en-gb');
-const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
 const API_URL = 'https://my-rota-api.onrender.com'; // Your live Render URL
 
