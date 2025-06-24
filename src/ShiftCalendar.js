@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment-timezone'; // Using moment-timezone for robust handling
+import moment from 'moment'; // Using standard moment as per the working version
 import 'moment/locale/en-gb'; 
 import axios from 'axios';
 import Modal from 'react-modal';
@@ -10,7 +10,7 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V29
+// FINAL-VERSION-CHECK-CALENDAR-V30
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
@@ -205,26 +205,23 @@ function ShiftCalendar({ loggedInUser }) {
     };
     
     const createPayload = () => ({
-        start_time: moment.tz(`${shiftDate}T${shiftStartTime}`, "Europe/London").toISOString(),
-        end_time: moment.tz(`${shiftDate}T${shiftEndTime}`, "Europe/London").toISOString(),
+        start_time: moment.utc(`${shiftDate}T${shiftStartTime}`).toISOString(),
+        end_time: moment.utc(`${shiftDate}T${shiftEndTime}`).toISOString(),
         user_id: selectedUserId ? parseInt(selectedUserId) : null,
     });
 
     const handleSave = () => {
         const payload = { ...createPayload(), is_recurring: isRecurring, recurrence_months: recurrenceMonths };
-        axios.post(`${API_URL}/shifts`, payload).then(() => { fetchAllEvents(); closeModal(); })
+        const request = selectedEvent
+            ? axios.put(`${API_URL}/shifts/${selectedEvent.id.replace('shift-', '')}`, {...payload, apply_to_all: updateScope === 'all'})
+            : axios.post(`${API_URL}/shifts`, payload);
+            
+        request.then(() => { fetchAllEvents(); closeModal(); })
             .catch(err => { console.error("Error saving shift", err); alert("Could not save shift."); });
     };
 
-    const handleUpdate = () => {
-        const payload = { ...createPayload(), apply_to_all: updateScope === 'all' };
-        const shiftId = String(selectedEvent.id).replace('shift-', '');
-        axios.put(`${API_URL}/shifts/${shiftId}`, payload).then(() => { fetchAllEvents(); closeModal(); })
-            .catch(err => { console.error("Error updating shift", err); alert("Could not update shift."); });
-    };
-    
     const handleDelete = () => {
-        if (!window.confirm(`Are you sure? This will delete ${updateScope === 'all' ? 'this and all future recurring shifts' : 'only this shift'}.`)) return;
+        if (!selectedEvent || !window.confirm(`Are you sure? This will delete ${updateScope === 'all' ? 'this and all future recurring shifts' : 'only this shift'}.`)) return;
         const shiftId = String(selectedEvent.id).replace('shift-', '');
         axios.delete(`${API_URL}/shifts/${shiftId}`, { data: { apply_to_all: updateScope === 'all' } }).then(() => { fetchAllEvents(); closeModal(); })
             .catch(err => { console.error("Error deleting shift", err); alert("Could not delete shift."); });
@@ -325,7 +322,7 @@ function ShiftCalendar({ loggedInUser }) {
                     {selectedEvent ? (
                         <>
                             <button onClick={handleDelete} className="modal-button modal-button-danger">Delete</button>
-                            <button onClick={handleUpdate} className="modal-button modal-button-primary">Save Changes</button>
+                            <button onClick={handleSave} className="modal-button modal-button-primary">Save Changes</button>
                         </>
                     ) : (
                         <button onClick={handleSave} className="modal-button modal-button-primary" style={{width: '100%'}}>Save Shift</button>
