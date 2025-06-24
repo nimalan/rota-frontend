@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Calendar, momentLocalizer } from 'react-big-calendar';
-import moment from 'moment'; // Using standard moment as per the working version
+import moment from 'moment-timezone'; // Using moment-timezone for robust handling
 import 'moment/locale/en-gb'; 
 import axios from 'axios';
 import Modal from 'react-modal';
@@ -10,14 +10,14 @@ import withDragAndDrop from 'react-big-calendar/lib/addons/dragAndDrop';
 import 'react-big-calendar/lib/addons/dragAndDrop/styles.css';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 
-// FINAL-VERSION-CHECK-CALENDAR-V30
+// FINAL-VERSION-CHECK-CALENDAR-V29
 moment.locale('en-gb');
 const DraggableCalendar = withDragAndDrop(Calendar);
 const localizer = momentLocalizer(moment);
 const API_URL = 'https://my-rota-api.onrender.com'; // Your Live Render URL
 
 const GlobalStyles = () => (
-  <style jsx global>{`
+  <style jsx global>{
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     body, button, input, select { font-family: 'Inter', sans-serif; }
     .rbc-event {
@@ -41,7 +41,7 @@ const GlobalStyles = () => (
     .modal-button-secondary:hover { background-color: #e0e0e0; }
     .modal-button-danger { background-color: #dc3545; color: white; }
     .modal-button-danger:hover { background-color: #c82333; }
-  `}</style>
+  }</style>
 );
 const customStyles = {
     content: {
@@ -55,8 +55,8 @@ const customStyles = {
 };
 const TimePicker = ({ value, onChange, label }) => {
     const [hour, minute] = value ? value.split(':') : ['09', '00'];
-    const handleHourChange = (e) => onChange(`${e.target.value}:${minute}`);
-    const handleMinuteChange = (e) => onChange(`${hour}:${e.target.value}`);
+    const handleHourChange = (e) => onChange(${e.target.value}:${minute});
+    const handleMinuteChange = (e) => onChange(${hour}:${e.target.value});
     const hours = Array.from({ length: (22 - 6) + 1 }, (_, i) => 6 + i);
 
     return (
@@ -150,13 +150,13 @@ function ShiftCalendar({ loggedInUser }) {
     }, [generateColor]);
 
     const formatShiftEvent = useCallback((shift) => ({
-        id: `shift-${shift.id}`, title: shift.user ? shift.user.username : 'Unassigned',
+        id: shift-${shift.id}, title: shift.user ? shift.user.username : 'Unassigned',
         start: new Date(shift.start_time), end: new Date(shift.end_time),
         userId: shift.user_id, isHoliday: false, recurring_shift_id: shift.recurring_shift_id
     }), []);
     
     const formatHolidayEvent = useCallback((holiday) => ({
-        id: `holiday-${holiday.id}`, title: `${holiday.user.username} Holiday (${holiday.status})`,
+        id: holiday-${holiday.id}, title: ${holiday.user.username} Holiday (${holiday.status}),
         start: moment(holiday.start_date).toDate(), end: moment(holiday.end_date).add(1, 'days').toDate(),
         allDay: true, isHoliday: true, status: holiday.status
     }), []);
@@ -164,8 +164,8 @@ function ShiftCalendar({ loggedInUser }) {
     const fetchAllEvents = useCallback(() => {
         const startDate = moment(navDate).startOf(view).toISOString();
         const endDate = moment(navDate).endOf(view).toISOString();
-        const fetchShifts = axios.get(`${API_URL}/shifts`, { params: { start_date: startDate, end_date: endDate }});
-        const fetchHolidays = axios.get(`${API_URL}/holidays`);
+        const fetchShifts = axios.get(${API_URL}/shifts, { params: { start_date: startDate, end_date: endDate }});
+        const fetchHolidays = axios.get(${API_URL}/holidays);
         
         Promise.all([fetchShifts, fetchHolidays])
             .then(([shiftsResponse, holidaysResponse]) => {
@@ -176,7 +176,7 @@ function ShiftCalendar({ loggedInUser }) {
     }, [navDate, view, formatShiftEvent, formatHolidayEvent]);
 
     useEffect(() => {
-        axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
+        axios.get(${API_URL}/users).then(res => setUsers(res.data));
     }, []);
 
     useEffect(() => {
@@ -205,25 +205,28 @@ function ShiftCalendar({ loggedInUser }) {
     };
     
     const createPayload = () => ({
-        start_time: moment.utc(`${shiftDate}T${shiftStartTime}`).toISOString(),
-        end_time: moment.utc(`${shiftDate}T${shiftEndTime}`).toISOString(),
+        start_time: moment.tz(${shiftDate}T${shiftStartTime}, "Europe/London").toISOString(),
+        end_time: moment.tz(${shiftDate}T${shiftEndTime}, "Europe/London").toISOString(),
         user_id: selectedUserId ? parseInt(selectedUserId) : null,
     });
 
     const handleSave = () => {
         const payload = { ...createPayload(), is_recurring: isRecurring, recurrence_months: recurrenceMonths };
-        const request = selectedEvent
-            ? axios.put(`${API_URL}/shifts/${selectedEvent.id.replace('shift-', '')}`, {...payload, apply_to_all: updateScope === 'all'})
-            : axios.post(`${API_URL}/shifts`, payload);
-            
-        request.then(() => { fetchAllEvents(); closeModal(); })
+        axios.post(${API_URL}/shifts, payload).then(() => { fetchAllEvents(); closeModal(); })
             .catch(err => { console.error("Error saving shift", err); alert("Could not save shift."); });
     };
 
-    const handleDelete = () => {
-        if (!selectedEvent || !window.confirm(`Are you sure? This will delete ${updateScope === 'all' ? 'this and all future recurring shifts' : 'only this shift'}.`)) return;
+    const handleUpdate = () => {
+        const payload = { ...createPayload(), apply_to_all: updateScope === 'all' };
         const shiftId = String(selectedEvent.id).replace('shift-', '');
-        axios.delete(`${API_URL}/shifts/${shiftId}`, { data: { apply_to_all: updateScope === 'all' } }).then(() => { fetchAllEvents(); closeModal(); })
+        axios.put(${API_URL}/shifts/${shiftId}, payload).then(() => { fetchAllEvents(); closeModal(); })
+            .catch(err => { console.error("Error updating shift", err); alert("Could not update shift."); });
+    };
+    
+    const handleDelete = () => {
+        if (!window.confirm(Are you sure? This will delete ${updateScope === 'all' ? 'this and all future recurring shifts' : 'only this shift'}.)) return;
+        const shiftId = String(selectedEvent.id).replace('shift-', '');
+        axios.delete(${API_URL}/shifts/${shiftId}, { data: { apply_to_all: updateScope === 'all' } }).then(() => { fetchAllEvents(); closeModal(); })
             .catch(err => { console.error("Error deleting shift", err); alert("Could not delete shift."); });
     };
 
@@ -236,7 +239,7 @@ function ShiftCalendar({ loggedInUser }) {
             apply_to_all: false, 
         };
         const shiftId = String(event.id).replace('shift-', '');
-        axios.put(`${API_URL}/shifts/${shiftId}`, payload).then(() => fetchAllEvents())
+        axios.put(${API_URL}/shifts/${shiftId}, payload).then(() => fetchAllEvents())
             .catch(err => {
                 console.error("Error updating shift via drag", err);
                 alert("Could not update shift.");
@@ -322,7 +325,7 @@ function ShiftCalendar({ loggedInUser }) {
                     {selectedEvent ? (
                         <>
                             <button onClick={handleDelete} className="modal-button modal-button-danger">Delete</button>
-                            <button onClick={handleSave} className="modal-button modal-button-primary">Save Changes</button>
+                            <button onClick={handleUpdate} className="modal-button modal-button-primary">Save Changes</button>
                         </>
                     ) : (
                         <button onClick={handleSave} className="modal-button modal-button-primary" style={{width: '100%'}}>Save Shift</button>
@@ -332,5 +335,5 @@ function ShiftCalendar({ loggedInUser }) {
         </div>
     );
 }
-
+ 
 export default ShiftCalendar;
